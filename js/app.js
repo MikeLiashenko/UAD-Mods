@@ -144,15 +144,8 @@
 	}
 
 	// --- file -----------------------------------------------------------------------------------
-	const TR = { а: "a", б: "b", в: "v", г: "g", ґ: "g", д: "d", е: "e", є: "ye", ё: "yo", ж: "zh", з: "z", и: "i", і: "i", ї: "yi", й: "y", к: "k", л: "l",
-		м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "",
-		э: "e", ю: "yu", я: "ya" };
-
 	function modId(name) {
-		let s = "";
-		for (const ch of (name || "mod").toLowerCase()) s += TR[ch] !== undefined ? TR[ch] : ch;
-		s = s.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 32);
-		return s || "mod";
+		return UAD_latin(name || "mod", 32) || "mod";
 	}
 
 	function download(blob, file) {

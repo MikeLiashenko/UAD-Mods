@@ -18,7 +18,7 @@ function save() {
 }
 
 function uniqueName(base) {
-	let n = base.replace(/[^a-z0-9_]/g, "_").replace(/^[^a-z]+/, "").slice(0, 24) || "model";
+	let n = UAD_latin(base) || "model";
 	if (!models[n]) return n;
 	for (let i = 2; ; i++) if (!models[n + i]) return n + i;
 }
@@ -214,10 +214,12 @@ window.UAD_ModelsTab = {
 			create(kind, id);
 		});
 		$("#m-name-input").addEventListener("change", () => {
-			const n = uniqueName($("#m-name-input").value.toLowerCase());
+			const n = UAD_latin($("#m-name-input").value) === current ? current : uniqueName($("#m-name-input").value);
 			if (!current || n === current) { $("#m-name-input").value = current; return; }
 			models[n] = models[current];
 			delete models[current];
+			// the blocks that wore the old file wear the renamed one
+			if (window.Blockly && window.UAD_Blocks) UAD_Blocks.renameRefs(Blockly.getMainWorkspace(), "MODEL", current + ".uadmodel", n + ".uadmodel");
 			current = n;
 			$("#m-name-input").value = n;
 			renderList();

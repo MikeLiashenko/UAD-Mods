@@ -172,10 +172,9 @@
 			const orig = Blockly.Blocks[type].init;
 			Blockly.Blocks[type].init = function () {
 				orig.call(this);
-				this.getField("ID").setValidator((v) => {
-					const s = String(v).toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/^[^a-z]+/, "").slice(0, 24);
-					return s || null;
-				});
+				// any letters are taken: they become a latin id ("Ланцет" → "lantset"); empty keeps the old one
+				this.getField("ID").setValidator((v) => UAD_latin(v) || null);
+				this.getField("ID").setTooltip(T.id_tip);
 				this.getInput("M").appendField(lenientDropdown(() => modelOptions(kind)), "MODEL");
 				this.setFieldValue("default", "MODEL");
 			};
@@ -273,6 +272,16 @@
 	}
 	let reset = () => {};
 
+	// every block field `field` ("ENEMY" / "WEAPON" / "MODEL") that holds `from` holds `to` now
+	function renameRefs(ws, field, from, to) {
+		Blockly.Events.setGroup(true);
+		for (const blk of ws.getAllBlocks(false)) {
+			const f = blk.getField(field);
+			if (f && f.getValue() === from) f.setValue(to);
+		}
+		Blockly.Events.setGroup(false);
+	}
+
 	// the workspace's variables are the module's globals: a handler that changes one says so
 	function globalsLine(block) {
 		const names = Blockly.Variables.allUsedVarModels(block.workspace).map((v) => gen.getVariableName(v.getId()));
@@ -340,9 +349,13 @@
 		generate,
 		// a person picked another type: the numbers start from that type's own (a loaded block keeps its own)
 		onEvent(e, ws) {
-			if (e.type !== Blockly.Events.BLOCK_CHANGE || e.element !== "field" || e.name !== "TYPE" || e.isUiEvent) return;
+			if (e.type !== Blockly.Events.BLOCK_CHANGE || e.element !== "field" || e.isUiEvent) return;
 			const b = ws.getBlockById(e.blockId);
-			if (b && (b.type === "uad_weapon" || b.type === "uad_enemy")) typeDefaults(b, b.type === "uad_enemy" ? "enemy" : "weapon", e.newValue);
+			if (!b || (b.type !== "uad_weapon" && b.type !== "uad_enemy")) return;
+			if (e.name === "TYPE") typeDefaults(b, b.type === "uad_enemy" ? "enemy" : "weapon", e.newValue);
+			// a new id: the blocks that named the old one name the new one
+			if (e.name === "ID" && e.oldValue && e.newValue) renameRefs(ws, b.type === "uad_enemy" ? "ENEMY" : "WEAPON", e.oldValue, e.newValue);
 		},
+		renameRefs,
 	};
 })();
