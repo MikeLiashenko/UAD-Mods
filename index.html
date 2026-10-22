@@ -125,6 +125,36 @@ button, input, textarea { font: inherit; color: inherit; }
 	max-height: 300px; overflow: auto; white-space: pre; margin: 8px 0 0; }
 .warn { color: var(--amber); font-size: 14px; }
 
+/* 3D models */
+.m3d { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+.m3d-side h2 { font: 20px var(--display); margin: 0 0 4px; }
+.m3d-side, .m3d-props { display: flex; flex-direction: column; gap: 8px; }
+.m3d-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--dim); text-transform: uppercase; letter-spacing: 0.7px; margin-top: 6px; }
+.m3d-label input { text-transform: none; letter-spacing: 0; }
+.m3d-row { display: flex; gap: 6px; flex-wrap: wrap; }
+#m-list { display: flex; flex-direction: column; gap: 4px; }
+.m-item { text-align: left; font: 600 13px var(--mono); }
+.m-item.on, .tool.on, .m-part.on { border-color: var(--neon); background: rgba(61, 255, 176, 0.18); }
+select, .m3d input, #m-props input { background: rgba(2, 12, 9, 0.85); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; color: var(--text); min-width: 0; }
+#m-ours { flex: 1; }
+.m3d-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 8px; }
+.m3d-bar .sep { width: 1px; height: 26px; background: var(--line2); margin: 0 4px; }
+.m3d-bar .spacer { flex: 1; }
+.tool { border: 1px solid var(--line2); background: rgba(10, 40, 30, 0.7); border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; min-width: 38px; }
+.tool:hover { border-color: var(--neon); }
+.m3d-work { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 10px; }
+#m-canvas { width: 100%; height: calc(100vh - 330px); min-height: 420px; border: 1px solid var(--line2); border-radius: 14px; display: block; touch-action: none; }
+.m3d-props { max-height: calc(100vh - 330px); min-height: 420px; overflow: auto; padding-right: 4px; }
+#m-parts { display: flex; flex-direction: column; gap: 3px; max-height: 190px; overflow: auto; }
+.m-part { text-align: left; border: 1px solid var(--line); background: rgba(9, 28, 22, 0.7); border-radius: 7px; padding: 4px 8px; font-size: 13px; cursor: pointer; }
+#m-props { display: flex; flex-direction: column; gap: 7px; }
+#m-props h4 { margin: 8px 0 0; font: 15px var(--display); color: var(--cyan); }
+.prop { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 6px; align-items: center; font-size: 13px; color: var(--muted); font-weight: 600; }
+.prop.vec { grid-template-columns: 1fr; gap: 3px; }
+.xyz { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.xyz input { width: 100%; font: 12.5px var(--mono); }
+.prop input[type=color] { height: 32px; padding: 2px; }
+
 /* help */
 .help { max-width: 860px; }
 .help h2 { font: 24px var(--display); margin: 6px 0 12px; }
@@ -144,6 +174,9 @@ button, input, textarea { font: inherit; color: inherit; }
 	.meta label:first-child { grid-column: 1 / -1; }
 	.pic { grid-template-columns: minmax(0, 1fr); }
 	.preview-box { position: static; order: -1; }
+	.m3d, .m3d-work { grid-template-columns: minmax(0, 1fr); }
+	#m-canvas { height: 60vh; min-height: 320px; }
+	.m3d-props { max-height: none; min-height: 0; }
 	.top .game { display: none; }
 	.intro h1 { font-size: 24px; }
 	#blockly { height: calc(100vh - 220px); min-height: 420px; }
@@ -189,6 +222,7 @@ button, input, textarea { font: inherit; color: inherit; }
 	<nav class="tabs">
 		<button data-tab="blocks" data-t="tab_blocks"></button>
 		<button data-tab="code" data-t="tab_code"></button>
+		<button data-tab="models" data-t="tab_models"></button>
 		<button data-tab="picture" data-t="tab_picture"></button>
 		<button data-tab="help" data-t="tab_help"></button>
 	</nav>
@@ -210,6 +244,59 @@ button, input, textarea { font: inherit; color: inherit; }
 		<p class="note" id="code-note" data-t="code_note"></p>
 		<div class="banner" id="detached" hidden><span data-t="code_detached"></span><button class="btn small" id="btn-back" data-t="back_to_blocks"></button></div>
 		<div id="code"></div>
+	</section>
+
+	<section class="pane" id="pane-models" hidden>
+		<div class="m3d">
+			<aside class="m3d-side">
+				<h2 data-t="m_title"></h2>
+				<p class="note" data-t="m_lead"></p>
+				<div class="m3d-label" data-t="m_my_models"></div>
+				<div id="m-list"></div>
+				<div class="m3d-row">
+					<button class="btn small" id="m-new-w" data-t="m_new_weapon"></button>
+					<button class="btn small" id="m-new-e" data-t="m_new_enemy"></button>
+				</div>
+				<div class="m3d-label" data-t="m_from_ours"></div>
+				<div class="m3d-row"><select id="m-ours"></select><button class="btn small" id="m-use-ours" data-t="m_use"></button></div>
+				<label class="m3d-label"><span data-t="m_name"></span><input id="m-name-input" maxlength="24" spellcheck="false"></label>
+				<button class="btn small" id="m-delete" data-t="m_delete"></button>
+			</aside>
+			<div class="m3d-main">
+				<p class="note" id="m-empty" data-t="m_empty"></p>
+				<div id="m-editor" hidden>
+					<div class="m3d-bar">
+						<button class="tool" data-shape="box" title="box">▭</button>
+						<button class="tool" data-shape="cylinder" title="cylinder">◯</button>
+						<button class="tool" data-shape="cone" title="cone">▲</button>
+						<button class="tool" data-shape="sphere" title="sphere">●</button>
+						<button class="tool" data-shape="prism" title="prism">◣</button>
+						<span class="sep"></span>
+						<button class="tool on" data-gizmo="translate" data-t="m_move"></button>
+						<button class="tool" data-gizmo="rotate" data-t="m_rotate"></button>
+						<button class="tool" data-gizmo="scale" data-t="m_scale"></button>
+						<span class="sep"></span>
+						<button class="tool" id="m-undo" title="undo">↶</button>
+						<button class="tool" id="m-redo" title="redo">↷</button>
+						<button class="tool" id="m-copy" data-t="m_copy"></button>
+						<button class="tool" id="m-mirror" data-t="m_mirror"></button>
+						<button class="tool" id="m-remove" data-t="m_remove"></button>
+						<button class="tool" id="m-frame" data-t="m_frame"></button>
+						<span class="spacer"></span>
+						<button class="tool" id="m-kind"></button>
+					</div>
+					<div class="m3d-work">
+						<canvas id="m-canvas"></canvas>
+						<aside class="m3d-props">
+							<div class="m3d-label" data-t="m_parts"></div>
+							<div id="m-parts"></div>
+							<div id="m-props"></div>
+						</aside>
+					</div>
+					<p class="note" data-t="m_hint"></p>
+				</div>
+			</div>
+		</div>
 	</section>
 
 	<section class="pane" id="pane-picture" hidden>
@@ -249,10 +336,15 @@ button, input, textarea { font: inherit; color: inherit; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
 <script src="js/data.js"></script>
+<script src="js/models.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/blocks.js"></script>
 <script src="js/shader.js"></script>
+<script type="module" src="js/models_tab.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -35,8 +35,31 @@
 		return own.concat(UAD_ENEMIES.map((e) => [name3(e), e.id]));
 	}
 
-	const baseWeapons = () => UAD_WEAPONS.map((w) => [name3(w), w.id]);
-	const baseEnemies = () => UAD_ENEMIES.map((e) => [name3(e), e.id]);
+	const weaponTypes = () => UAD_WEAPON_TYPES.map((x) => [name3(x), x.id]);
+	const enemyTypes = () => UAD_ENEMY_TYPES.map((x) => [name3(x), x.id]);
+
+	// the model: the mod's own ones of that kind first («name.uadmodel» of the 3D models tab), the
+	// type's own, then every model of the game
+	function modelOptions(kind) {
+		const own = window.UAD_ModelsTab ? UAD_ModelsTab.all() : {};
+		const out = Object.keys(own).filter((n) => own[n].kind === kind).map((n) => ["★ " + n, n + ".uadmodel"]);
+		out.push([T.model_default, "default"]);
+		for (const it of (kind === "enemy" ? UAD_ENEMIES : UAD_WEAPONS)) out.push([name3(it), it.id]);
+		return out;
+	}
+
+	// a new type: the numbers start from that type's own system / threat
+	function typeDefaults(block, kind, typeId) {
+		const ty = (kind === "enemy" ? UAD_ENEMY_TYPES : UAD_WEAPON_TYPES).find((x) => x.id === typeId);
+		const src = ty && (kind === "enemy" ? UAD_ENEMIES : UAD_WEAPONS).find((x) => x.id === ty.template);
+		if (!src || block.isInFlyout) return;
+		const set = (f, v) => { if (v !== undefined && block.getField(f)) block.setFieldValue(v, f); };
+		if (kind === "enemy") {
+			set("SPEED", src.speed); set("HP", src.hp); set("REWARD", src.reward); set("HIT", src.hit_damage);
+		} else {
+			set("RANGE", src.range); set("DAMAGE", src.damage); set("RATE", src.rate); set("UNLOCK", src.unlock); set("MPRICE", src.missile_price || 0);
+		}
+	}
 	const colours = () => COLOURS.map((c) => [T[c[0]], c[1] || "none"]);
 	const opts = (list) => list.map((k) => [T[k[0]], k[1]]);
 
@@ -54,21 +77,23 @@
 
 	function define() {
 		const json = [
-			{ type: "uad_weapon", message0: T.b_weapon, args0: [idField("my_sam"), { type: "field_dropdown", name: "BASE", options: baseWeapons() }],
-				message1: T.b_name, args1: [{ type: "field_input", name: "NAME", text: T.def_weapon }],
-				message2: T.b_range, args2: [{ type: "field_number", name: "RANGE", value: 6000, min: 100, max: 400000 }, { type: "field_number", name: "DAMAGE", value: 120, min: 1, max: 5000 }],
-				message3: T.b_rate, args3: [{ type: "field_number", name: "RATE", value: 1.4, min: 0.05, max: 60, precision: 0.05 }, { type: "field_number", name: "UNLOCK", value: 8000, min: 0, max: 5000000 }],
-				message4: T.b_mprice, args4: [{ type: "field_number", name: "MPRICE", value: 900, min: 0, max: 1000000 }, { type: "field_dropdown", name: "TINT", options: colours() }],
+			{ type: "uad_weapon", message0: T.b_weapon, args0: [idField("my_sam"), { type: "field_dropdown", name: "TYPE", options: weaponTypes() }],
+				message1: T.b_model, args1: [{ type: "input_dummy", name: "M" }],
+				message2: T.b_name, args2: [{ type: "field_input", name: "NAME", text: T.def_weapon }],
+				message3: T.b_range, args3: [{ type: "field_number", name: "RANGE", value: 6000, min: 100, max: 400000 }, { type: "field_number", name: "DAMAGE", value: 120, min: 1, max: 5000 }],
+				message4: T.b_rate, args4: [{ type: "field_number", name: "RATE", value: 1.4, min: 0.05, max: 60, precision: 0.05 }, { type: "field_number", name: "UNLOCK", value: 8000, min: 0, max: 5000000 }],
+				message5: T.b_mprice, args5: [{ type: "field_number", name: "MPRICE", value: 900, min: 0, max: 1000000 }, { type: "field_dropdown", name: "TINT", options: colours() }],
 				previousStatement: "def", nextStatement: "def", colour: HUE.def, tooltip: "uad.weapon(...)" },
 			{ type: "uad_change_weapon", message0: T.b_change_weapon,
 				args0: [{ type: "input_dummy", name: "W" }, { type: "field_dropdown", name: "FIELD", options: opts([["f_range", "range"], ["f_damage", "damage"], ["f_rate", "rate"], ["f_unlock", "unlock"], ["f_mprice", "missile_price"], ["f_ceil", "ceil"]]) },
 					{ type: "field_number", name: "VALUE", value: 2000 }],
 				previousStatement: "def", nextStatement: "def", colour: HUE.def, tooltip: "uad.change_weapon(...)" },
-			{ type: "uad_enemy", message0: T.b_enemy, args0: [idField("my_drone"), { type: "field_dropdown", name: "BASE", options: baseEnemies() }],
-				message1: T.b_name, args1: [{ type: "field_input", name: "NAME", text: T.def_enemy }],
-				message2: T.b_speed, args2: [{ type: "field_number", name: "SPEED", value: 70, min: 5, max: 3000 }, { type: "field_number", name: "HP", value: 30, min: 1, max: 5000 }],
-				message3: T.b_reward, args3: [{ type: "field_number", name: "REWARD", value: 1500, min: 0, max: 500000 }, { type: "field_number", name: "HIT", value: 2.5, min: 0, max: 50, precision: 0.1 }],
-				message4: T.b_color, args4: [{ type: "field_dropdown", name: "TINT", options: colours() }],
+			{ type: "uad_enemy", message0: T.b_enemy, args0: [idField("my_drone"), { type: "field_dropdown", name: "TYPE", options: enemyTypes() }],
+				message1: T.b_model, args1: [{ type: "input_dummy", name: "M" }],
+				message2: T.b_name, args2: [{ type: "field_input", name: "NAME", text: T.def_enemy }],
+				message3: T.b_speed, args3: [{ type: "field_number", name: "SPEED", value: 70, min: 5, max: 3000 }, { type: "field_number", name: "HP", value: 30, min: 1, max: 5000 }],
+				message4: T.b_reward, args4: [{ type: "field_number", name: "REWARD", value: 1500, min: 0, max: 500000 }, { type: "field_number", name: "HIT", value: 2.5, min: 0, max: 50, precision: 0.1 }],
+				message5: T.b_color, args5: [{ type: "field_dropdown", name: "TINT", options: colours() }],
 				previousStatement: "def", nextStatement: "def", colour: HUE.enemy, tooltip: "uad.enemy(...)" },
 			{ type: "uad_change_enemy", message0: T.b_change_enemy,
 				args0: [{ type: "input_dummy", name: "E" }, { type: "field_dropdown", name: "FIELD", options: opts([["f_speed", "speed"], ["f_hp", "hp"], ["f_reward", "reward"], ["f_hit", "hit_damage"], ["f_altmin", "alt_min"], ["f_altmax", "alt_max"], ["f_swarm", "swarm"]]) },
@@ -141,8 +166,9 @@
 				});
 			};
 		}
-		// field ids stay valid Python-friendly ids
+		// field ids stay valid Python-friendly ids; the model row and the type's numbers
 		for (const type of ["uad_weapon", "uad_enemy"]) {
+			const kind = type === "uad_enemy" ? "enemy" : "weapon";
 			const orig = Blockly.Blocks[type].init;
 			Blockly.Blocks[type].init = function () {
 				orig.call(this);
@@ -150,6 +176,8 @@
 					const s = String(v).toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/^[^a-z]+/, "").slice(0, 24);
 					return s || null;
 				});
+				this.getInput("M").appendField(lenientDropdown(() => modelOptions(kind)), "MODEL");
+				this.setFieldValue("default", "MODEL");
 			};
 		}
 	}
@@ -172,18 +200,21 @@
 	const useUad = () => { gen.definitions_["import_uad"] = "import uad"; };
 	const tint = (block) => { const c = block.getFieldValue("TINT"); return c && c !== "none" ? ", tint=" + q(c) : ""; };
 
-	function weaponKind(id) {
-		const w = UAD_WEAPONS.find((x) => x.id === id);
+	function weaponKind(typeId) {
+		const ty = UAD_WEAPON_TYPES.find((x) => x.id === typeId);
+		const w = ty && UAD_WEAPONS.find((x) => x.id === ty.template);
 		return w ? w.kind : "missile";
 	}
+
+	const modelArg = (b) => { const m = b.getFieldValue("MODEL"); return m && m !== "default" ? ", model=" + q(m) : ""; };
 
 	function install() {
 		const F = gen.forBlock;
 		F.uad_weapon = (b) => {
 			useUad();
-			const base = b.getFieldValue("BASE");
-			const mp = weaponKind(base) === "gun" ? "" : ", missile_price=" + num(b.getFieldValue("MPRICE"));
-			return "uad.weapon(" + q(b.getFieldValue("ID")) + ", base=" + q(base) + ", name=" + q(b.getFieldValue("NAME")) +
+			const ty = b.getFieldValue("TYPE");
+			const mp = weaponKind(ty) === "gun" ? "" : ", missile_price=" + num(b.getFieldValue("MPRICE"));
+			return "uad.weapon(" + q(b.getFieldValue("ID")) + ", type=" + q(ty) + modelArg(b) + ", name=" + q(b.getFieldValue("NAME")) +
 				",\n    range=" + num(b.getFieldValue("RANGE")) + ", damage=" + num(b.getFieldValue("DAMAGE")) + ", rate=" + num(b.getFieldValue("RATE")) +
 				", unlock=" + num(b.getFieldValue("UNLOCK")) + mp + tint(b) + ")\n";
 		};
@@ -192,7 +223,7 @@
 			useUad();
 			const c = b.getFieldValue("TINT");
 			const colour = c && c !== "none" ? ", color=" + q(c) : "";
-			return "uad.enemy(" + q(b.getFieldValue("ID")) + ", base=" + q(b.getFieldValue("BASE")) + ", name=" + q(b.getFieldValue("NAME")) +
+			return "uad.enemy(" + q(b.getFieldValue("ID")) + ", type=" + q(b.getFieldValue("TYPE")) + modelArg(b) + ", name=" + q(b.getFieldValue("NAME")) +
 				",\n    speed=" + num(b.getFieldValue("SPEED")) + ", hp=" + num(b.getFieldValue("HP")) + ", reward=" + num(b.getFieldValue("REWARD")) +
 				", hit_damage=" + num(b.getFieldValue("HIT")) + tint(b) + colour + ")\n";
 		};
@@ -307,5 +338,11 @@
 		},
 		toolbox,
 		generate,
+		// a person picked another type: the numbers start from that type's own (a loaded block keeps its own)
+		onEvent(e, ws) {
+			if (e.type !== Blockly.Events.BLOCK_CHANGE || e.element !== "field" || e.name !== "TYPE" || e.isUiEvent) return;
+			const b = ws.getBlockById(e.blockId);
+			if (b && (b.type === "uad_weapon" || b.type === "uad_enemy")) typeDefaults(b, b.type === "uad_enemy" ? "enemy" : "weapon", e.newValue);
+		},
 	};
 })();

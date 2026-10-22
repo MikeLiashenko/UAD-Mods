@@ -1,6 +1,7 @@
-// The mod maker page: language, tabs, the blocks workspace, the code editor, the picture tab, the
-// project kept in the browser, examples, and the .uadmod file (a zip: mod.json, main.py, and the
-// blocks themselves in blocks.json so the site can open the mod again; the game reads only the first two).
+// The mod maker page: language, tabs, the blocks workspace, the code editor, the 3D models and the
+// picture tabs, the project kept in the browser, examples, and the .uadmod file (a zip: mod.json,
+// main.py, the models as «name.uadmodel», and the blocks themselves in blocks.json so the site can
+// open the mod again; the game does not read that one).
 
 (function () {
 	"use strict";
@@ -79,10 +80,12 @@
 		}
 		ws.addChangeListener((e) => {
 			if (e.isUiEvent) return;
+			UAD_Blocks.onEvent(e, ws);
 			refreshCode();
 			scheduleSave();
 		});
 		UAD_Picture.relabel(T, $("#fx"));
+		if (window.UAD_ModelsTab) UAD_ModelsTab.relabel(T, l);
 		refreshCode();
 		resize();
 	}
@@ -132,7 +135,7 @@
 
 	function save() {
 		const p = { meta: meta(), blocks: ws ? Blockly.serialization.workspaces.save(ws) : null, detached, code: manualCode,
-			picture: UAD_Picture.state(), withPicture: $("#with-pic").checked };
+			picture: UAD_Picture.state(), withPicture: $("#with-pic").checked, models: window.UAD_ModelsTab ? UAD_ModelsTab.all() : {} };
 		try {
 			localStorage.setItem(KEY, JSON.stringify(p));
 			$("#saved").classList.add("show");
@@ -169,6 +172,8 @@
 		zip.file("main.py", currentCode());
 		if (ws) zip.file("blocks.json", JSON.stringify(Blockly.serialization.workspaces.save(ws)));
 		if ($("#with-pic").checked && UAD_Picture.any()) zip.file("picture.uadshader", UAD_Picture.code(m.name, m.description));
+		const models = window.UAD_ModelsTab ? UAD_ModelsTab.all() : {};
+		for (const n in models) zip.file(n + ".uadmodel", JSON.stringify(Object.assign({}, models[n], { name: n }), null, "\t"));
 		const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
 		download(blob, id + ".uadmod");
 		toast(t("downloaded").replace("%s", id + ".uadmod"));
@@ -195,6 +200,12 @@
 				$("#m-desc").value = d.description || "";
 			}
 			const code = await main.async("string");
+			const models = {};
+			for (const f of Object.keys(zip.files)) {
+				if (!f.endsWith(".uadmodel")) continue;
+				try { models[f.split("/").pop().replace(/\.uadmodel$/, "")] = JSON.parse(await zip.file(f).async("string")); } catch (e) {}
+			}
+			if (window.UAD_ModelsTab) UAD_ModelsTab.set(models);
 			const bj = zip.file("blocks.json");
 			if (bj) {
 				ws.clear();
@@ -226,7 +237,7 @@
 	function example(kind) {
 		const nm = { uk: ["Стріла-М", "Ланцет"], ru: ["Стрела-М", "Ланцет"], en: ["Strela-M", "Lancet"] }[lang];
 		const xml = {
-			weapon: "<xml><block type=\"uad_weapon\" x=\"30\" y=\"30\"><field name=\"ID\">strela_m</field><field name=\"BASE\">avenger</field>" +
+			weapon: "<xml><block type=\"uad_weapon\" x=\"30\" y=\"30\"><field name=\"ID\">strela_m</field><field name=\"TYPE\">short</field><field name=\"MODEL\">avenger</field>" +
 				"<field name=\"NAME\">" + nm[0] + "</field><field name=\"RANGE\">6500</field><field name=\"DAMAGE\">130</field><field name=\"RATE\">1.2</field>" +
 				"<field name=\"UNLOCK\">9000</field><field name=\"MPRICE\">700</field><field name=\"TINT\">#7fb8ff</field></block>" +
 				"<block type=\"uad_on_buy\" x=\"30\" y=\"300\"><statement name=\"DO\"><block type=\"controls_if\"><value name=\"IF0\"><block type=\"logic_compare\">" +
@@ -234,7 +245,7 @@
 				"<value name=\"B\">" + tx("strela_m") + "</value></block></value><statement name=\"DO0\"><block type=\"uad_give_ammo\">" +
 				"<field name=\"WEAPON\">strela_m</field><value name=\"N\">" + n(6) + "</value><next><block type=\"uad_message\"><field name=\"COL\">#7dffb0</field>" +
 				"<value name=\"TEXT\">" + sh(nm[0] + " +6") + "</value></block></next></block></statement></block></statement></block></xml>",
-			enemy: "<xml><block type=\"uad_enemy\" x=\"30\" y=\"30\"><field name=\"ID\">lancet</field><field name=\"BASE\">shahed</field>" +
+			enemy: "<xml><block type=\"uad_enemy\" x=\"30\" y=\"30\"><field name=\"ID\">lancet</field><field name=\"TYPE\">drone</field><field name=\"MODEL\">shahed</field>" +
 				"<field name=\"NAME\">" + nm[1] + "</field><field name=\"SPEED\">80</field><field name=\"HP\">22</field><field name=\"REWARD\">1800</field>" +
 				"<field name=\"HIT\">2</field><field name=\"TINT\">#ff9a3d</field><next><block type=\"uad_raid\"><field name=\"ENEMY\">lancet</field>" +
 				"<field name=\"NIGHT\">2</field><field name=\"WEIGHT\">1.5</field></block></next></block>" +
@@ -279,6 +290,7 @@
 		document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
 		document.querySelectorAll(".pane").forEach((p) => { p.hidden = p.id !== "pane-" + name; });
 		if (name === "code" && cm) setTimeout(() => cm.refresh(), 0);
+		if (name === "models" && window.UAD_ModelsTab) UAD_ModelsTab.show();
 		resize();
 	}
 
@@ -336,6 +348,10 @@
 		$("#prev-night").addEventListener("change", () => UAD_Picture.setPreview($("#prev-night").checked, $("#prev-alarm").checked));
 		$("#prev-alarm").addEventListener("change", () => UAD_Picture.setPreview($("#prev-night").checked, $("#prev-alarm").checked));
 		UAD_Picture.setPreview(true, false);
+		if (window.UAD_ModelsTab) {
+			UAD_ModelsTab.init({ texts: Object.assign({}, UAD_T.en, UAD_T[pickLang()]), lang: pickLang(), models: p.models,
+				onChange: () => { refreshCode(); scheduleSave(); } });
+		}
 		window.addEventListener("resize", resize);
 		await setLang(pickLang());
 		if (p.detached) {
